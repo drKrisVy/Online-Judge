@@ -11,6 +11,13 @@ const UserSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    // Unique handle for leaderboards and profiles
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+    },
     // Primary login identifier. Indexed for O(1) performance lookup.
     email: {
         type: String,
@@ -20,22 +27,30 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
     },
-    // Optional contact number for platform alerts or future 2FA
     mobileNumber: {
         type: String,
         trim: true,
     },
-    // Bcrypt hashed password. NEVER stored as plain text.
     password: {
         type: String,
         required: true,
     },
+    // Determines access level (e.g., locking down the Admin Panel)
+    role: { 
+        type: String, 
+        enum: ['user', 'admin'], 
+        default: 'user' 
+    },
+    // Tracks which problems the user has successfully solved
+    solvedProblems: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Problem' 
+    }]
 }, {
-    // Automatically generates 'createdAt' and 'updatedAt' timestamps for every user
     timestamps: true 
 });
 
-// Create and export the User model based on the schema
-const User = mongoose.model("user", UserSchema);
+// Capitalized model names are the standard convention in Mongoose
+const User = mongoose.model("User", UserSchema);
 
 export default User;

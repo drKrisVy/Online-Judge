@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken'; // NEW: Imported for Socket Auth
+import jwt from 'jsonwebtoken'; 
 
 import DBConnection from './database/db.js';
 import problemRoutes from './routes/problem-routes.js';
@@ -19,19 +19,28 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+// --- CORS CONFIGURATION ---
+// Ensures the backend accepts connections from local development AND your live AWS IP
+const allowedOrigins = [
+    'http://localhost:3000', 
+    'http://13.218.219.24', 
+    'http://13.218.219.24:3000'
+];
+
 const io = new Server(server, {
     cors: {
-        origin: 'http://localhost:3000',
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true
     }
 });
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// --- ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/api/submissions', submissionRoutes);
@@ -67,7 +76,7 @@ io.use((socket, next) => {
         
         // 4. Attach the user data to this specific socket connection
         socket.user = verified;
-        next(); // Let them into the room!
+        next(); 
 
     } catch (error) {
         console.error("Socket Auth Error:", error.message);
@@ -75,9 +84,9 @@ io.use((socket, next) => {
     }
 });
 
-// THE MULTIPLAYER SOCKET LOGIC
+// --- THE MULTIPLAYER SOCKET LOGIC ---
 io.on('connection', (socket) => {
-    // You now securely have access to the user making the connection!
+    // Securely access the user making the connection
     const userId = socket.user._id || socket.user.id;
     console.log(`🔒 Secure Connection established by User ID: ${userId}`);
 

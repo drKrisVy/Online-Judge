@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define all three directories we need to mount into Docker
+// Ensure the directories exist
 const codesPathDir = path.join(__dirname, '../codes');
 const outputPathDir = path.join(__dirname, '../outputs');
 const inputPathDir = path.join(__dirname, '../inputs');
@@ -17,23 +17,23 @@ if (!fs.existsSync(inputPathDir)) fs.mkdirSync(inputPathDir, { recursive: true }
 const executeCpp = (filepath, input = "") => {
     const jobId = path.basename(filepath).split('.')[0];
     const inputFilePath = path.join(inputPathDir, `${jobId}.txt`);
+    const outPath = path.join(outputPathDir, `${jobId}.out`);
 
-    // Write the database test cases to a text file
+    // Write the test case to a text file
     fs.writeFileSync(inputFilePath, input);
 
     return new Promise((resolve, reject) => {
-        // THE DOCKER COMMAND
-        // --rm: Instantly destroy the container after it finishes
-        // -v: Mount local Mac folders into the container's virtual file system
-        const command = `docker run --rm -v "${codesPathDir}":/codes -v "${outputPathDir}":/outputs -v "${inputPathDir}":/inputs gcc:latest sh -c "g++ /codes/${jobId}.cpp -o /outputs/${jobId}.out && /outputs/${jobId}.out < /inputs/${jobId}.txt"`;
+        // We removed 'docker run'. It just directly uses the g++ we installed!
+        const command = `g++ "${filepath}" -o "${outPath}" && "${outPath}" < "${inputFilePath}"`;
 
-        // Bumped timeout to 8 seconds to account for Docker startup time
         exec(command, { timeout: 8000 }, (error, stdout, stderr) => {
             if (error) {
                 reject({ error, stderr });
+                return;
             }
             if (stderr) {
-                reject(stderr);
+                reject({ stderr });
+                return;
             }
             resolve(stdout);
         });
