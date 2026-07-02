@@ -6,28 +6,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure the directories exist
-const codesPathDir = path.join(__dirname, '../codes');
 const outputPathDir = path.join(__dirname, '../outputs');
 const inputPathDir = path.join(__dirname, '../inputs');
 
 if (!fs.existsSync(outputPathDir)) fs.mkdirSync(outputPathDir, { recursive: true });
 if (!fs.existsSync(inputPathDir)) fs.mkdirSync(inputPathDir, { recursive: true });
 
-// MODIFIED: Added timeLimit parameter (defaults to 1000ms if missing)
-const executeCpp = (filepath, input = "", timeLimit = 1000) => {
+const executePy = (filepath, input = "", timeLimit = 1000) => {
     const jobId = path.basename(filepath).split('.')[0];
     const inputFilePath = path.join(inputPathDir, `${jobId}.txt`);
-    const outPath = path.join(outputPathDir, `${jobId}.out`);
-
-    // Write the test case to a text file
+    
     fs.writeFileSync(inputFilePath, input);
 
     return new Promise((resolve, reject) => {
-        // Direct compilation and execution using g++
-        const command = `g++ "${filepath}" -o "${outPath}" && "${outPath}" < "${inputFilePath}"`;
+        // Direct execution using python3
+        const command = `python3 "${filepath}" < "${inputFilePath}"`;
 
-        // MODIFIED: Passed the dynamic timeLimit into the exec options
         exec(command, { timeout: timeLimit }, (error, stdout, stderr) => {
             if (error) {
                 reject({ error, stderr });
@@ -42,4 +36,4 @@ const executeCpp = (filepath, input = "", timeLimit = 1000) => {
     });
 };
 
-export default executeCpp;
+export default executePy;

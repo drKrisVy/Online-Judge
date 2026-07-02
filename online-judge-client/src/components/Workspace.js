@@ -34,7 +34,7 @@ if __name__ == '__main__':
     solve()`
 };
 
-const socket = io('http://13.218.219.24:8000', {
+const socket = io('https://kiss-purse-wedding-asbestos.trycloudflare.com', {
     withCredentials: true,
     autoConnect: false, 
 });

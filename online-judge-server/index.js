@@ -20,13 +20,16 @@ const app = express();
 const server = http.createServer(app);
 
 // --- CORS CONFIGURATION ---
-// Ensures the backend accepts connections from local development AND your live AWS IP
+// Ensures the backend accepts connections from local development, raw AWS, and Vercel
 const allowedOrigins = [
     'http://localhost:3000', 
     'http://13.218.219.24', 
-    'http://13.218.219.24:3000'
+    'http://13.218.219.24:3000',
+    'https://online-judge-taupe.vercel.app',
+    'https://kiss-purse-wedding-asbestos.trycloudflare.com'
 ];
 
+// WebSockets (Socket.io) now automatically inherit the Vercel URL
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
@@ -35,6 +38,7 @@ const io = new Server(server, {
     }
 });
 
+// Express HTTP now inherits the Vercel URL
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
