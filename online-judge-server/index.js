@@ -20,25 +20,22 @@ const app = express();
 const server = http.createServer(app);
 
 // --- CORS CONFIGURATION ---
-// Ensures the backend accepts connections from local development, raw AWS, and Vercel
 const allowedOrigins = [
     'http://localhost:3000', 
     'http://13.218.219.24', 
     'http://13.218.219.24:3000',
     'https://online-judge-taupe.vercel.app',
-    'https://kiss-purse-wedding-asbestos.trycloudflare.com'
+    'https://online-judge.online' // FIXED: Replaced Cloudflare with your actual domain
 ];
 
-// WebSockets (Socket.io) now automatically inherit the Vercel URL
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
         methods: ['GET', 'POST'],
-        credentials: true
+        credentials: true // Crucial for accepting the Vercel cookie
     }
 });
 
-// Express HTTP now inherits the Vercel URL
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -55,14 +52,12 @@ app.use('/api/leaderboard', leaderboardRoutes);
 // --- THE SOCKET GATEKEEPER ---
 io.use((socket, next) => {
     try {
-        // 1. Manually extract the cookie string from the socket handshake
         const cookieHeader = socket.handshake.headers.cookie;
         if (!cookieHeader) {
             console.warn(`Socket blocked: No cookies present [Socket ID: ${socket.id}]`);
             return next(new Error("Socket Access Denied: No cookies present"));
         }
 
-        // 2. Parse the cookie string to find the 'token=' value
         const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
             const [name, value] = cookie.trim().split('=');
             acc[name] = value;
@@ -75,10 +70,7 @@ io.use((socket, next) => {
             return next(new Error("Socket Access Denied: No JWT token found"));
         }
 
-        // 3. Verify the token using your server's secret key
         const verified = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // 4. Attach the user data to this specific socket connection
         socket.user = verified;
         next(); 
 
@@ -90,7 +82,6 @@ io.use((socket, next) => {
 
 // --- THE MULTIPLAYER SOCKET LOGIC ---
 io.on('connection', (socket) => {
-    // Securely access the user making the connection
     const userId = socket.user._id || socket.user.id;
     console.log(`🔒 Secure Connection established by User ID: ${userId}`);
 
@@ -103,12 +94,10 @@ io.on('connection', (socket) => {
         socket.to(roomId).emit('receive-code-change', newCode);
     });
 
-    // Listen for brush strokes and broadcast them to the room
     socket.on('draw', ({ roomId, drawingData }) => {
         socket.to(roomId).emit('receive-draw', drawingData);
     });
 
-    // Listen for the clear canvas command and broadcast it
     socket.on('clear-canvas', ({ roomId }) => {
         socket.to(roomId).emit('receive-clear-canvas');
     });

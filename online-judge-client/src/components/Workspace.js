@@ -1,39 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../api/axios';
 import { io } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
 
 const STARTER_CODES = {
-    cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    // write code here yk
-    
-    return 0;
-}`,
-
-    java: `import java.util.*;
-
-class Main {
-    public static void main(String[] args) {
-        // write code here yk
-        
-    }
-}`,
-
-    py: `import sys
-
-def solve():
-    # write code here yk
-    pass
-
-if __name__ == '__main__':
-    solve()`
+    cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // write code here\n    \n    return 0;\n}`,
+    java: `import java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        // write code here\n        \n    }\n}`,
+    py: `import sys\n\ndef solve():\n    # write code here\n    pass\n\nif __name__ == '__main__':\n    solve()`
 };
 
+// Initialize socket OUTSIDE component to prevent multiple instances, but keep it disconnected initially
 const socket = io('https://online-judge.online', {
     withCredentials: true,
     autoConnect: false, 
@@ -43,34 +21,30 @@ const Workspace = () => {
     const { id } = useParams(); 
     const [searchParams, setSearchParams] = useSearchParams();
     const sessionId = searchParams.get('session'); 
-    const navigate = useNavigate(); // Initialize navigator
+    const navigate = useNavigate();
     
-    // --- REAL AUTHENTICATION CHECK ---
-    let user = null;
-    try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser && storedUser !== 'undefined') {
-            user = JSON.parse(storedUser);
-        }
-    } catch (e) {
-        console.error("Failed to parse user from local storage");
-    }
+    // --- AUTHENTICATION CHECK ---
+    const [user, setUser] = useState(null);
 
-    // Kick unauthenticated users out to the login screen
     useEffect(() => {
-        if (!user) {
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser && storedUser !== 'undefined') {
+                setUser(JSON.parse(storedUser));
+            } else {
+                navigate('/login', { replace: true });
+            }
+        } catch (e) {
+            console.error("Failed to parse user");
             navigate('/login', { replace: true });
         }
-    }, [user, navigate]);
+    }, [navigate]);
 
-    // Use the real user ID, no more fake fallbacks
     const userId = user?.id || user?._id;
     
     const [problemData, setProblemData] = useState(null);
     const [language, setLanguage] = useState('cpp');
-    
     const [code, setCode] = useState(STARTER_CODES['cpp']);
-    
     const [activeTab, setActiveTab] = useState('editor');
     const [isSubmitting, setIsSubmitting] = useState(false); 
     const [submissionResult, setSubmissionResult] = useState(''); 
@@ -95,7 +69,7 @@ const Workspace = () => {
                 console.error("Error fetching problem:", error);
             }
         };
-        fetchProblem();
+        if (id) fetchProblem();
     }, [id]);
 
     useEffect(() => {
@@ -107,36 +81,29 @@ const Workspace = () => {
             if (parent.clientWidth > 0 && parent.clientHeight > 0) {
                 if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
                     const ctx = canvas.getContext('2d');
-                    
                     let imgData;
                     if (canvas.width > 0 && canvas.height > 0) {
                         imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     }
-                    
                     canvas.width = parent.clientWidth;
                     canvas.height = parent.clientHeight;
-                    
-                    if (imgData) {
-                        ctx.putImageData(imgData, 0, 0);
-                    }
+                    if (imgData) ctx.putImageData(imgData, 0, 0);
                 }
             }
         };
 
         const timeoutId = setTimeout(resizeCanvas, 150);
-        
         window.addEventListener('resize', resizeCanvas);
         return () => {
             clearTimeout(timeoutId);
             window.removeEventListener('resize', resizeCanvas);
         };
-    }, []);
+    }, [activeTab]); // Added activeTab to dependency array so it resizes when switching tabs
 
     const drawLine = useCallback((x0, y0, x1, y1, color, emit) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const context = canvas.getContext('2d');
-        
         const w = canvas.width;
         const h = canvas.height;
 
@@ -193,12 +160,14 @@ const Workspace = () => {
             clearCanvas(false);
         });
 
+        // Cleanup function to prevent memory leaks when leaving the workspace
         return () => {
             socket.off('receive-code-change');
             socket.off('receive-draw');
             socket.off('receive-clear-canvas');
+            socket.emit('leave-room', sessionId); // Optional: if your backend handles this
         };
-    }, [id, sessionId, setSearchParams, drawLine, clearCanvas]);
+    }, [sessionId, setSearchParams, drawLine, clearCanvas]);
 
     const handleEditorChange = (value) => {
         setCode(value);
@@ -210,12 +179,9 @@ const Workspace = () => {
     const getCoordinates = (e) => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
-        
         const rect = canvas.getBoundingClientRect();
-        
         const scaleX = canvas.width / rect.width;    
         const scaleY = canvas.height / rect.height;  
-
         return {
             x: (e.clientX - rect.left) * scaleX,
             y: (e.clientY - rect.top) * scaleY
@@ -248,7 +214,6 @@ const Workspace = () => {
     };
 
     const handleSubmit = async () => {
-        // Prevent submission if somehow a user bypasses the UI check
         if (!userId) {
             setSubmissionResult("Error: Unauthorized. Please log in.");
             return;
@@ -309,7 +274,6 @@ const Workspace = () => {
         }
     };
 
-    // Show nothing (or a loader) if user isn't authenticated yet or data is loading
     if (!user) return null;
     if (!problemData) return <div style={{ color: 'white', textAlign: 'center', marginTop: '50px' }}>Loading workspace...</div>;
 
