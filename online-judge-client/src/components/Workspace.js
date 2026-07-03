@@ -34,7 +34,7 @@ if __name__ == '__main__':
     solve()`
 };
 
-const socket = io('https://kiss-purse-wedding-asbestos.trycloudflare.com', {
+const socket = io('https://online-judge.online', {
     withCredentials: true,
     autoConnect: false, 
 });

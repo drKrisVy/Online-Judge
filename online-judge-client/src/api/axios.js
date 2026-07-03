@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://kiss-purse-wedding-asbestos.trycloudflare.com/api', 
+    baseURL: 'https://online-judge.online/api', 
     withCredentials: true, 
     headers: {
         'Content-Type': 'application/json',
