@@ -81,7 +81,7 @@ const Workspace = () => {
         const resizeCanvas = () => {
             if (parent.clientWidth > 0 && parent.clientHeight > 0) {
                 if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                    const ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
                     let imgData;
                     if (canvas.width > 0 && canvas.height > 0) {
                         imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -99,12 +99,12 @@ const Workspace = () => {
             clearTimeout(timeoutId);
             window.removeEventListener('resize', resizeCanvas);
         };
-    }, [activeTab]); // Added activeTab to dependency array so it resizes when switching tabs
+    }, [activeTab]); 
 
     const drawLine = useCallback((x0, y0, x1, y1, color, emit) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
         const w = canvas.width;
         const h = canvas.height;
 
@@ -128,7 +128,7 @@ const Workspace = () => {
     const clearCanvas = useCallback((emit = true) => {
         const canvas = canvasRef.current;
         if (canvas) {
-            const context = canvas.getContext('2d');
+            const context = canvas.getContext('2d', { willReadFrequently: true });
             context.clearRect(0, 0, canvas.width, canvas.height);
         }
         if (emit && sessionId) {
@@ -166,7 +166,7 @@ const Workspace = () => {
             socket.off('receive-code-change');
             socket.off('receive-draw');
             socket.off('receive-clear-canvas');
-            socket.emit('leave-room', sessionId); // Optional: if your backend handles this
+            socket.emit('leave-room', sessionId); 
         };
     }, [sessionId, setSearchParams, drawLine, clearCanvas]);
 
