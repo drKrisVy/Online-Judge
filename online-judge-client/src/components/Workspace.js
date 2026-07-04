@@ -15,6 +15,7 @@ const STARTER_CODES = {
 const socket = io('https://online-judge.online', {
     withCredentials: true,
     autoConnect: false, 
+    transports: ['websocket']
 });
 
 const Workspace = () => {
